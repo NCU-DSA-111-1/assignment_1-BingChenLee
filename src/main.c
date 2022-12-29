@@ -1,6 +1,6 @@
-#include "backprop.h"
-#include "layer.h"
-#include "neuron.h"
+#include "../inc/backprop.h"
+#include "../inc/layer.h"
+#include "../inc/neuron.h"
 
 // Initial value
 #define NUMBER_LAYERS 4
@@ -10,7 +10,7 @@
 #define NUMBER_NEURON_OUTPUT_LAYER 1
 #define TRAINING_SETS 4
 #define LEARNING_RATE 0.15
-#define INPUT_LENGTH 100
+#define INPUT_LENGTH 0
 
 enum state{
     SHOW_TRAINING = 1,
@@ -166,11 +166,11 @@ void feed_input(int i)
 
     for(j=0; j< *num_neurons ; j++)
     {
-        ((lay+0)->neu+j)->actv = *(*(training_input+i)+j);
+        lay[0].neu[j].actv = training_input[i][j];
 
         if(state == SHOW_TRAINING)
         {
-            printf("%d", (int) (((lay+0)->neu+j)->actv) ); // Show Actual Output
+            printf("%d", (int)lay[0].neu[j].actv); // Show Actual Output
         }
         
     }
@@ -190,14 +190,14 @@ int create_architecture()
 
     for(i=0;i<num_layers;i++)
     {
-        *(lay+i) = create_layer(*(num_neurons+i));      
-        (lay+i)->num_neu = *(num_neurons+i);
+        lay[i] = create_layer(*(num_neurons+i));      
+        lay[i].num_neu = *(num_neurons+i);
 
         for(j=0; j< *(num_neurons+i) ; j++)
         {
             if(i < (num_layers-1)) 
             {
-                *((lay+i)->neu+j) = create_neuron( *(num_neurons+(i+1)) );
+                lay[i].neu[j] = create_neuron( *(num_neurons+(i+1)) );
             }
         }
     }
@@ -230,21 +230,21 @@ int initialize_weights(void)
             for(k=0; k< *(num_neurons+(i+1)) ; k++)
             {
                 // Initialize Output Weights for each neuron
-                *(((lay+i)->neu+j)->out_weights+k) = ((double)rand())/((double)RAND_MAX);
-                *(((lay+i)->neu+j)->dw+k) = 0.0;
+                lay[i].neu[j].out_weights[k] = ((double)rand())/((double)RAND_MAX);
+                lay[i].neu[j].dw[k] = 0.0;
             }
 
             if(i>0) 
             {
-                (((lay+i)->neu+j)->bias) = ((double)rand())/((double)RAND_MAX);
+                lay[i].neu[j].bias = ((double)rand())/((double)RAND_MAX);
             }
         }
     }   
     printf("\n");
     
-    for (j=0; j< *(num_neurons+(num_layers-1)) ; j++)
+    for (j=0; j<num_neurons[num_layers-1]; j++)
     {
-        (((lay+(num_layers-1))->neu+j)->bias) = ((double)rand())/((double)RAND_MAX);
+        lay[num_layers-1].neu[j].bias = ((double)rand())/((double)RAND_MAX);
     }
 
     return SUCCESS_INIT_WEIGHTS;
@@ -308,7 +308,7 @@ void compute_error(int i)
 
     for(j=0; j< *(num_neurons+(num_layers-1)) ; j++)
     {
-        sum_squ_error += (pow(( *(*(desired_outputs+i)+j) - ((lay+(num_layers-1))->neu+j)->actv), 2));
+        sum_squ_error += (pow((desired_outputs[i][j] - lay[num_layers-1].neu[j].actv), 2));
     }   
 }
 
@@ -321,15 +321,15 @@ void back_prop(int p)
     // Output Layer
     for(j=0; j< *(num_neurons+(num_layers-1)); j++)
     {           
-        (((lay+(num_layers-1))->neu+j)->dz) = ( (((lay+(num_layers-1))->neu+j)->actv) - *(*(desired_outputs+p)+j) ) * (((lay+(num_layers-1))->neu+j)->actv) * (1- (((lay+(num_layers-1))->neu+j)->actv));
+        lay[num_layers-1].neu[j].dz = (lay[num_layers-1].neu[j].actv - desired_outputs[p][j]) * (lay[num_layers-1].neu[j].actv) * (1- lay[num_layers-1].neu[j].actv);
 
         for(k=0; k< *(num_neurons+(num_layers-2)) ; k++)
         {   
-            *(((lay+(num_layers-2))->neu+k)->dw+j) = ( (((lay+(num_layers-1))->neu+j)->dz) * (((lay+(num_layers-2))->neu+k)->actv) );
-            (((lay+(num_layers-2))->neu+k)->dactv) = *(((lay+(num_layers-2))->neu+k)->out_weights+j) * (((lay+(num_layers-1))->neu+j)->dz);
+            lay[num_layers-2].neu[k].dw[j] = (lay[num_layers-1].neu[j].dz * lay[num_layers-2].neu[k].actv);
+            lay[num_layers-2].neu[k].dactv = lay[num_layers-2].neu[k].out_weights[j] * lay[num_layers-1].neu[j].dz;
         }
             
-        (((lay+(num_layers-1))->neu+j)->dbias) = (((lay+(num_layers-1))->neu+j)->dz);           
+        lay[num_layers-1].neu[j].dbias = lay[num_layers-1].neu[j].dz;           
     }
 
     // Hidden Layers
@@ -337,26 +337,26 @@ void back_prop(int p)
     {
         for(j=0; j< *(num_neurons+i) ; j++)
         {
-            if( (((lay+i)->neu+j)->z) >= 0)
+            if(lay[i].neu[j].z >= 0)
             {
-                (((lay+i)->neu+j)->dz) = (((lay+i)->neu+j)->dactv);
+                lay[i].neu[j].dz = lay[i].neu[j].dactv;
             }
             else
             {
-                (((lay+i)->neu+j)->dz) = 0;
+                lay[i].neu[j].dz = 0;
             }
 
             for(k=0; k< *(num_neurons+(i-1)) ; k++)
             {
-                *(((lay+(i-1))->neu+k)->dw+j) = (((lay+i)->neu+j)->dz) * (((lay+(i-1))->neu+k)->actv);    
+                lay[i-1].neu[k].dw[j] = lay[i].neu[j].dz * lay[i-1].neu[k].actv;    
                 
                 if(i>1)
                 {
-                    (((lay+(i-1))->neu+k)->dactv) = *(((lay+(i-1))->neu+k)->out_weights+j) * (((lay+i)->neu+j)->dz);
+                    lay[i-1].neu[k].dactv = lay[i-1].neu[k].out_weights[j] * lay[i].neu[j].dz;
                 }
             }
 
-            (((lay+i)->neu+j)->dbias) = (((lay+i)->neu+j)->dz);
+            lay[i].neu[j].dbias = lay[i].neu[j].dz;
         }
     }
 }
@@ -372,11 +372,11 @@ void update_weights(void)
             for(k=0; k< *(num_neurons+(i+1)) ; k++)
             {
                 // Update Weights
-                *(((lay+i)->neu+j)->out_weights+k) = ( *(((lay+i)->neu+j)->out_weights+k) ) - (learning_rate * *(((lay+i)->neu+j)->dw+k) );
+                lay[i].neu[j].out_weights[k] = (lay[i].neu[j].out_weights[k]) - (learning_rate * lay[i].neu[j].dw[k]);
             }
             
             // Update Bias
-            (((lay+i)->neu+j)->bias) -= (learning_rate * (((lay+i)->neu+j)->dbias) );
+            lay[i].neu[j].bias = lay[i].neu[j].bias - (learning_rate * lay[i].neu[j].dbias);
         }
     }   
 }
@@ -409,11 +409,11 @@ void test_nn(void)
             round_count_max = strlen(string)-1;
 
             // Change the type from character to int
-            (((lay+0)->neu+0)->actv) = (*string)-'0'; 
-            (((lay+0)->neu+1)->actv) = (*(string+1))-'0'; 
+            lay[0].neu[0].actv = (*string)-'0'; 
+            lay[0].neu[1].actv = (*(string+1))-'0'; 
 
             // Check if the user's inputs are in the correct form (only 0 and 1 in the string)
-            if(((((lay+0)->neu+0)->actv) != 0 && (((lay+0)->neu+0)->actv) != 1) || ((((lay+0)->neu+1)->actv) != 0 && (((lay+0)->neu+1)->actv) != 1) )
+            if((lay[0].neu[0].actv != 0 && lay[0].neu[0].actv != 1) || (lay[0].neu[1].actv != 0 && lay[0].neu[1].actv != 1) )
             {
                 printf("Please enter a binary string\n");
                 free(string); // Free the memroies
@@ -438,41 +438,41 @@ void forward_prop(void)
     {   
         for(j=0; j< *(num_neurons+i) ; j++)
         {
-            (((lay+i)->neu+j)->z) = (((lay+i)->neu+j)->bias);
+            lay[i].neu[j].z = lay[i].neu[j].bias;
 
             for(k=0; k< *(num_neurons+(i-1)) ; k++)
             {
-                (((lay+i)->neu+j)->z)  += (( *(((lay+(i-1))->neu+k)->out_weights+j) ) * ( (((lay+(i-1))->neu+k)->actv)) );
+                lay[i].neu[j].z  = lay[i].neu[j].z + ((lay[i-1].neu[k].out_weights[j]) * (lay[i-1].neu[k].actv));
             }
 
             // Relu Activation Function for Hidden Layers
             if(i < num_layers-1)
             {
-                if(( (((lay+i)->neu+j)->z) ) < 0)
+                if((lay[i].neu[j].z) < 0)
                 {
-                    (((lay+i)->neu+j)->actv) = 0;
+                    lay[i].neu[j].actv = 0;
                 }
 
                 else
                 {
-                    (((lay+i)->neu+j)->actv) = (((lay+i)->neu+j)->z);
+                    lay[i].neu[j].actv = lay[i].neu[j].z;
                 }
             }
             
             // Sigmoid Activation function for Output Layer
             else
             {
-                (((lay+i)->neu+j)->actv) = 1/(1+exp(- (((lay+i)->neu+j)->z) ));
+                lay[i].neu[j].actv = 1/(1+exp(-lay[i].neu[j].z));
                 
                 // Check if it is the last round of the test
                 if(round_count < round_count_max) // Not the last round
                 {
-                    (((lay+0)->neu+0)->actv) = (int)round( (((lay+(num_layers-1))->neu+0)->actv) ); // Set lay[0].neu[0].actv as the current round output value
-                    (((lay+0)->neu+1)->actv) = *(string+(round_count+1))-'0'; // Set lay[0].neu[1].actv as the next round new bit
+                    lay[0].neu[0].actv = (int)round(lay[num_layers-1].neu[0].actv); // Set lay[0].neu[0].actv as the current round output value
+                    lay[0].neu[1].actv = *(string+(round_count+1))-'0'; // Set lay[0].neu[1].actv as the next round new bit
                     round_count++;
 
                     // Detect the string is not in the binary form
-                    if( (((lay+0)->neu+1)->actv) != 0 && (((lay+0)->neu+1)->actv) != 1)
+                    if(lay[0].neu[1].actv != 0 && lay[0].neu[1].actv != 1)
                     {
                         printf("Please enter a binary string\n");
                         free(string); // Free the memroies
@@ -490,14 +490,14 @@ void forward_prop(void)
                     switch (state)
                     {   
                         case SHOW_TRAINING:
-                            printf("%d  ", (int)round( (((lay+(num_layers-1))->neu+0)->actv) )); // Print the output value
+                            printf("%d  ", (int)round(lay[num_layers-1].neu[0].actv)); // Print the output value
                             break;
 
                         case HIDE_TRAINING:
                             break;
 
                         case TEST:
-                            printf("Output: %d\n", (int)round( (((lay+(num_layers-1))->neu+0)->actv) )); // Print the output value
+                            printf("Output: %d\n", (int)round(lay[num_layers-1].neu[0].actv)); // Print the output value
                             break;
                     }
                     

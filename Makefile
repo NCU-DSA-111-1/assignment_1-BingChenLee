@@ -1,16 +1,21 @@
+build = $(wildcard build/*.o)
+
 LDFLAGS = -pthread -lpthread
 CFLAGS = -g -Wall -Werror
-backprop: backprop.o layer.o neuron.o
-	$(CC) $(LDFLAGS) -o backprop main.o layer.o neuron.o -lm
 
-backprop.o: main.c
-	$(CC) $(CFLAGS) -c main.c
+FORCE: main
 
-layer.o: layer.c
-	$(CC) $(CFLAGS) -c layer.c
+main: main.o layer.o neuron.o
+	$(CC) $(LDFLAGS) $(build) -o bin/main -lm
 
-neuron.o: neuron.c
-	$(CC) $(CFLAGS) -c neuron.c
+layer.o: 
+	$(CC) $(CFLAGS) -c src/layer.c -o build/layer.o
+
+main.o: 
+	$(CC) $(CFLAGS) -c src/main.c -o build/main.o
+
+neuron.o: 
+	$(CC) $(CFLAGS) -c src/neuron.c -o build/neuron.o
 
 # remove object files and executable when user executes "make clean"
 clean:

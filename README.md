@@ -7,11 +7,10 @@
 
 ```sh
 # Compile
-cd /Data_Structure_Assignment1_Use_NN_to_learn_XOR
-gcc -o main main.c -lm layer.c neuron.c
+make
 
 # Run
-./main
+./bin/main
 ```
 
 ## Usage 1 - Show Iteration Process
